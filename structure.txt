@@ -1,0 +1,34 @@
+frontend/
+├── components/
+│   ├── Game/
+│   │   ├── Board.tsx
+│   │   └── ChoiceButton.tsx
+│   ├── Dashboard/
+│   │   ├── StatsCard.tsx
+│   │   └── HistoryTable.tsx
+│   ├── Auth/
+│   │   └── WalletConnect.tsx
+│   └── Layout.tsx
+├── pages/
+│   ├── index.tsx        # Landing page
+│   ├── play.tsx         # Game page
+│   ├── dashboard.tsx
+│   ├── _app.tsx
+│   └── _document.tsx
+├── styles/
+│   ├── globals.css
+│   └── theme.css
+├── utils/
+│   ├── solana.ts        # Solana connection helper
+│   └── gameLogic.ts
+└── types/
+    └── types.ts
+
+
+programs/
+└── rps-game/
+    ├── src/
+    │   └── lib.rs       # Core program logic
+    ├── tests/
+    │   └── rps-test.ts  # Anchor tests
+    └── Cargo.toml
