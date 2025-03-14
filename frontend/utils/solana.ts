@@ -1,3 +1,5 @@
+//utils/solana.ts
+
 import { Program, AnchorProvider } from '@project-serum/anchor';
 
 export const playGame = async (choice: Choice) => {

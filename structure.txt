@@ -10,6 +10,12 @@ frontend/
 │   │   └── WalletConnect.tsx
 │   └── Layout.tsx
 ├── pages/
+    ├── api/
+       ├── users/
+│             ├── [publicKey].ts
+│             ├── index.ts
+│      ├── games.tsx
+│      ├── history.tsx
 │   ├── index.tsx        # Landing page
 │   ├── play.tsx         # Game page
 │   ├── dashboard.tsx
@@ -23,6 +29,8 @@ frontend/
 │   └── gameLogic.ts
 └── types/
     └── types.ts
+└── prisma/
+    └── schema.prisma
 
 
 programs/

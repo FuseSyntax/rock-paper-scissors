@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import { WalletConnectButton } from '../components/Auth/WalletConnect';
 import { FaHandRock, FaHandPaper, FaHandScissors } from 'react-icons/fa';
 import Link from 'next/link';
 
@@ -37,19 +36,20 @@ export default function Home() {
               transition={{ delay: 0.3 }}
               className="text-lg text-slate-400 max-w-2xl mx-auto mb-8"
             >
-              Engage in trustless rock-paper-scissors matches powered by Solana. 
+              Engage in trustless rock-paper-scissors matches powered by Solana.
               Compete globally, win SOL, and ascend the leaderboards.
             </motion.p>
 
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="inline-block bg-gradient-to-r from-teal-600/30 to-cyan-600/30 backdrop-blur-sm p-px rounded-lg"
+            <MotionStep delay={0.2}>
+            <Link href={"/play"}
+              className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-teal-600 to-cyan-600 rounded-lg font-medium text-lg shadow-xl shadow-cyan-900/20 hover:shadow-cyan-900/30 transition-all"
             >
-              <div className="bg-slate-900/80 rounded-lg">
-                <WalletConnectButton className="px-8 py-3 text-lg font-medium hover:bg-slate-800/50 transition-colors" />
-              </div>
-            </motion.div>
+              Start Playing
+              <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </Link>
+          </MotionStep>
           </motion.div>
 
           <motion.div
@@ -76,17 +76,17 @@ export default function Home() {
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { 
+              {
                 title: "Instant Settlements",
                 content: "Matches resolve in under 400ms using Solana's high-speed network",
                 color: "from-teal-600/20 to-cyan-600/20"
               },
-              { 
+              {
                 title: "Zero Trust",
                 content: "Fully on-chain logic with verifiable randomness",
                 color: "from-teal-600/20 to-cyan-600/20"
               },
-              { 
+              {
                 title: "Competitive Ladders",
                 content: "Global leaderboards with seasonal rewards",
                 color: "from-teal-600/20 to-cyan-600/20"
@@ -134,7 +134,7 @@ export default function Home() {
               Ready to Compete?
             </h2>
           </MotionStep>
-          
+
           <MotionStep delay={0.2}>
             <Link href={"/play"}
               className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-teal-600 to-cyan-600 rounded-lg font-medium text-lg shadow-xl shadow-cyan-900/20 hover:shadow-cyan-900/30 transition-all"

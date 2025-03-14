@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
-import { WalletConnectButton } from './Auth/WalletConnect';
 import Link from 'next/link';
+import { WalletConnectButton } from './Auth/WalletConnect';
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -49,12 +49,12 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4 }}
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 min-h-[70vh]"
       >
         {children}
       </motion.main>
 
-      <footer className="border-t border-slate-800/50 mt-24">
+      <footer className="border-t border-slate-800/50 mt-2">
         <div className="max-w-7xl mx-auto px-4 py-6 text-center">
           <p className="text-sm text-slate-400">
             © {new Date().getFullYear()} RPS Arena. All rights reserved.

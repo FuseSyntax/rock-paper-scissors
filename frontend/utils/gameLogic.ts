@@ -1,3 +1,5 @@
+//utils/gamelogic.ts
+
 import { Connection, PublicKey, Transaction } from '@solana/web3.js';
 import { Program, AnchorProvider } from '@project-serum/anchor';
 import { IDL } from './idl.ts'; // Your Anchor IDL
@@ -57,4 +59,17 @@ export const playGame = async (
 export const generateComputerChoice = (): Choice => {
   const choices: Choice[] = ['rock', 'paper', 'scissors'];
   return choices[Math.floor(Math.random() * choices.length)];
+};
+
+// utils/gameLogic.ts
+export const recordGameResult = async (publicKey: string, result: GameResult) => {
+  await fetch('/api/games', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      publicKey,
+      result,
+      amount: result === 'Win' ? 0.000001 : -0.000001
+    })
+  });
 };
