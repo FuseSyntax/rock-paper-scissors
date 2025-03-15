@@ -1,0 +1,31 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "postgresql" // or "sqlite" if using SQLite
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  publicKey   String      @id
+  wins        Int
+  losses      Int
+  ties        Int
+  balance     Float
+  games       GameHistory[]
+  createdAt   DateTime    @default(now())
+}
+
+model GameHistory {
+  id             Int      @id @default(autoincrement())
+  userPublicKey  String
+  user           User     @relation(fields: [userPublicKey], references: [publicKey])
+  result         String
+  yourChoice     String
+  computerChoice String
+  amount         Float
+  createdAt      DateTime @default(now())
+}

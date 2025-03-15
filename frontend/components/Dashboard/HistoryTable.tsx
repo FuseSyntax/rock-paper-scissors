@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useState } from 'react';
 
 interface GameHistory {
   date: string;
@@ -9,9 +10,23 @@ interface GameHistory {
 }
 
 export const HistoryTable = ({ data }: { data: GameHistory[] }) => {
+  const itemsPerPage = 5;
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.ceil(data.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentData = data.slice(startIndex, startIndex + itemsPerPage);
+
+  const handlePrevious = () => {
+    setCurrentPage((prev) => Math.max(prev - 1, 1));
+  };
+
+  const handleNext = () => {
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  };
+
   return (
     <div className="border border-slate-800/50 rounded-xl bg-slate-900/20 p-6 backdrop-blur-sm">
-      <h2 className="text-xl font-bold text-slate-300 mb-6">Game History</h2>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-slate-900/50">
@@ -29,7 +44,7 @@ export const HistoryTable = ({ data }: { data: GameHistory[] }) => {
             </tr>
           </thead>
           <tbody>
-            {data.map((item, index) => (
+            {currentData.map((item, index) => (
               <motion.tr
                 key={index}
                 initial={{ opacity: 0 }}
@@ -54,6 +69,28 @@ export const HistoryTable = ({ data }: { data: GameHistory[] }) => {
           </tbody>
         </table>
       </div>
+      
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center mt-4">
+          <button 
+            onClick={handlePrevious}
+            disabled={currentPage === 1}
+            className="px-4 py-2 bg-slate-800 rounded-md text-slate-300 hover:bg-slate-700 disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <span className="text-slate-300">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button 
+            onClick={handleNext}
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 bg-slate-800 rounded-md text-slate-300 hover:bg-slate-700 disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
   );
 };
