@@ -52,7 +52,8 @@ export default function PlayPage() {
       const signature = await sendTransaction(tx, connection);
       // Use a commitment level that suits your needs (here, 'processed')
       await connection.confirmTransaction(signature, 'processed');
-      toast.success(`Fee paid! Transaction: ${signature}`);
+      // toast.success(`Fee paid! Transaction: ${signature}`);
+      toast.success(`Fee paid successfully!`);
       return true;
     } catch (error) {
       console.error("Fee payment failed:", error);
