@@ -5,11 +5,12 @@ import { StatsCard } from '../components/Dashboard/StatsCard';
 import { HistoryTable } from '../components/Dashboard/HistoryTable';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import { FiAward, FiCalendar, FiCopy } from 'react-icons/fi';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Jazzicon from 'react-jazzicon';
 import { PublicKey } from '@solana/web3.js';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useRouter } from 'next/router';
 
 // A simple fetcher function for SWR
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -34,6 +35,7 @@ const generatePlayerName = (publicKey: PublicKey | null): string => {
   return `${names[index]} #${publicKeyStr.slice(0, 4)}`;
 };
 
+// ProfileCard component (unchanged)
 const ProfileCard = ({
   publicKey,
   stats,
@@ -97,21 +99,45 @@ const ProfileCard = ({
   );
 };
 
+// Updated Dashboard component
 export default function Dashboard() {
+  const [isClient, setIsClient] = useState(false);
   const { publicKey } = useWallet();
-  const publicKeyString = publicKey?.toBase58() || '';
+  const router = useRouter();
+
+  // Set isClient to true after mounting on the client
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Redirect if wallet is not connected (only on client side)
+  useEffect(() => {
+    if (isClient && !publicKey) {
+      toast.error('Please connect your wallet to access the dashboard.');
+      router.push('/'); // Redirect to homepage
+    }
+  }, [isClient, publicKey, router]);
+
+  // Always define publicKeyString, even if null
+  const publicKeyString = publicKey?.toBase58() || null;
+
+  // Always call useSWR hooks, but conditionally fetch data
   const { data: stats, mutate: mutateStats } = useSWR(
-    publicKeyString ? `/api/users/${publicKeyString}` : null,
+    isClient && publicKeyString ? `/api/users/${publicKeyString}` : null,
     fetcher
   );
   const { data: history } = useSWR(
-    publicKeyString ? `/api/history?publicKey=${publicKeyString}` : null,
+    isClient && publicKeyString ? `/api/history?publicKey=${publicKeyString}` : null,
     fetcher
   );
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
+  // Prevent rendering if not on client or wallet not connected
+  if (!isClient || !publicKey) {
+    return null; // Optionally return a loading indicator: <div>Loading...</div>
+  }
+
   const handleWithdraw = async () => {
-    if (!publicKeyString) return;
     setIsWithdrawing(true);
     try {
       const response = await fetch('/api/withdraw', {
@@ -121,11 +147,14 @@ export default function Dashboard() {
       });
       const data = await response.json();
       if (response.ok) {
-        toast.success(`Withdrawal successful! Transaction: ${data.txSignature}`);
-        mutateStats((prevStats?: UserStats) => ({
-          ...(prevStats || { wins: 0, losses: 0, ties: 0, balance: 0 }),
-          balance: 0,
-        }), false);
+        toast.success(`Withdrawal successful!`);
+        mutateStats(
+          (prevStats?: UserStats) => ({
+            ...(prevStats || { wins: 0, losses: 0, ties: 0, balance: 0 }),
+            balance: 0,
+          }),
+          false
+        );
         mutateStats();
       } else {
         toast.error(`Withdrawal failed: ${data.error}`);
