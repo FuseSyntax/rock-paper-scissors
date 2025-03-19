@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { FaHandRock, FaHandPaper, FaHandScissors } from 'react-icons/fa';
 import Link from 'next/link';
 
-const MotionStep = ({ children, delay = 0 }) => (
+const MotionStep = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     whileInView={{ opacity: 1, y: 0 }}
@@ -41,15 +41,16 @@ export default function Home() {
             </motion.p>
 
             <MotionStep delay={0.2}>
-            <Link href={"/play"}
-              className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-teal-600 to-cyan-600 rounded-lg font-medium text-lg shadow-xl shadow-cyan-900/20 hover:shadow-cyan-900/30 transition-all"
-            >
-              Start Playing
-              <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
-            </Link>
-          </MotionStep>
+              <Link
+                href="/play"
+                className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-teal-600 to-cyan-600 rounded-lg font-medium text-lg shadow-xl shadow-cyan-900/20 hover:shadow-cyan-900/30 transition-all"
+              >
+                Start Playing
+                <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+              </Link>
+            </MotionStep>
           </motion.div>
 
           <motion.div
@@ -79,18 +80,18 @@ export default function Home() {
               {
                 title: "Instant Settlements",
                 content: "Matches resolve in under 400ms using Solana's high-speed network",
-                color: "from-teal-600/20 to-cyan-600/20"
+                color: "from-teal-600/20 to-cyan-600/20",
               },
               {
                 title: "Zero Trust",
                 content: "Fully on-chain logic with verifiable randomness",
-                color: "from-teal-600/20 to-cyan-600/20"
+                color: "from-teal-600/20 to-cyan-600/20",
               },
               {
                 title: "Competitive Ladders",
                 content: "Global leaderboards with seasonal rewards",
-                color: "from-teal-600/20 to-cyan-600/20"
-              }
+                color: "from-teal-600/20 to-cyan-600/20",
+              },
             ].map((item, i) => (
               <MotionStep key={item.title} delay={0.2 + i * 0.1}>
                 <div className={`p-px rounded-xl bg-gradient-to-br ${item.color}`}>
@@ -113,7 +114,7 @@ export default function Home() {
               { value: "432K", label: "Daily Matches" },
               { value: "98.7%", label: "Uptime" },
               { value: "3.2s", label: "Avg. Match Time" },
-              { value: "16.8K", label: "Active Players" }
+              { value: "16.8K", label: "Active Players" },
             ].map((stat, i) => (
               <MotionStep key={stat.label} delay={0.1 + i * 0.05}>
                 <div className="p-6 text-center border border-slate-800/50 rounded-xl bg-slate-900/20">
@@ -136,7 +137,8 @@ export default function Home() {
           </MotionStep>
 
           <MotionStep delay={0.2}>
-            <Link href={"/play"}
+            <Link
+              href="/play"
               className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-teal-600 to-cyan-600 rounded-lg font-medium text-lg shadow-xl shadow-cyan-900/20 hover:shadow-cyan-900/30 transition-all"
             >
               Start Playing

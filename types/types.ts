@@ -1,3 +1,5 @@
+import { PublicKey } from "@solana/web3.js";
+
 export type GameChoice = 'rock' | 'paper' | 'scissors';
 export type GameResult = 'win' | 'loss' | 'tie';
 

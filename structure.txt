@@ -26,17 +26,9 @@ frontend/
 │   └── theme.css
 ├── utils/
 │   ├── solana.ts        # Solana connection helper
+│   └── idl.ts
 │   └── gameLogic.ts
 └── types/
     └── types.ts
 └── prisma/
     └── schema.prisma
-
-
-programs/
-└── rps-game/
-    ├── src/
-    │   └── lib.rs       # Core program logic
-    ├── tests/
-    │   └── rps-test.ts  # Anchor tests
-    └── Cargo.toml
