@@ -31,7 +31,7 @@ export const HistoryTable = ({ data }: { data: GameHistory[] }) => {
         <table className="w-full">
           <thead className="bg-slate-900/50">
             <tr>
-              {['Date', 'Result', 'Your Choice', 'Computer', 'Amount'].map((header, i) => (
+              {['Result', 'Your Choice', 'Computer', 'Amount'].map((header, i) => (
                 <th 
                   key={header}
                   className={`px-4 py-3 text-left text-slate-400 ${
@@ -51,7 +51,7 @@ export const HistoryTable = ({ data }: { data: GameHistory[] }) => {
                 animate={{ opacity: 1 }}
                 className="border-b border-slate-800/50 last:border-0 hover:bg-slate-900/20 transition-colors"
               >
-                <td className="px-4 py-3 text-slate-300">{item.date}</td>
+                {/* <td className="px-4 py-3 text-slate-300">{item.date}</td> */}
                 <td className="px-4 py-3">
                   <span className={`px-2.5 py-1 rounded-full text-sm ${
                     item.result === 'Win' ? 'bg-teal-600/20 text-teal-400' :

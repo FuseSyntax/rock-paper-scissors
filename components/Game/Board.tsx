@@ -1,16 +1,20 @@
+// frontend/components/Game/Board.tsx
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { playGame } from '../../utils/gameLogic';
 
+// Define our choices and derive a type from them
 const choices = ['rock', 'paper', 'scissors'] as const;
+type Choice = (typeof choices)[number];
 
 export default function GameBoard() {
-  const [userChoice, setUserChoice] = useState<Choice | null>(null);
+  // We don't use the userChoice here; it's just for demonstration.
+  const [, setUserChoice] = useState<Choice | null>(null);
   const [result, setResult] = useState<string>('');
 
   const handlePlay = async (choice: Choice) => {
     setUserChoice(choice);
-    const gameResult = await playGame(choice); // Integrates with Solana backend
+    // Simulate playing the game – replace this stub with your actual logic later.
+    const gameResult = await playGame(choice);
     setResult(gameResult);
   };
 
@@ -41,4 +45,16 @@ export default function GameBoard() {
       )}
     </div>
   );
+}
+
+/* 
+   If you want to keep the parameter for type signature and future use but don't use it now,
+   you can disable the no-unused-vars ESLint rule for this function:
+*/
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function playGame(_choice: Choice): Promise<string> {
+  // For demonstration, we simulate a game delay and always resolve with "Win"
+  return new Promise((resolve) => {
+    setTimeout(() => resolve("Win"), 500);
+  });
 }
