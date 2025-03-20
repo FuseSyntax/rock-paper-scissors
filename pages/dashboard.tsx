@@ -1,3 +1,4 @@
+// frontend/pages/dashboard.tsx
 import { useWallet } from '@solana/wallet-adapter-react';
 import useSWR from 'swr';
 import { motion } from 'framer-motion';
@@ -12,10 +13,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useRouter } from 'next/router';
 
-// A simple fetcher function for SWR
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
-// Define an interface for user statistics
+// Define the user stats interface
 interface UserStats {
   wins: number;
   losses: number;
@@ -23,6 +21,10 @@ interface UserStats {
   balance: number;
   createdAt?: string;
 }
+
+// A simple fetcher for SWR
+const fetcher = (url: string): Promise<UserStats> =>
+  fetch(url).then((res) => res.json());
 
 // Helper function to generate a player name based on public key
 const generatePlayerName = (publicKey: PublicKey | null): string => {
@@ -35,7 +37,6 @@ const generatePlayerName = (publicKey: PublicKey | null): string => {
   return `${names[index]} #${publicKeyStr.slice(0, 4)}`;
 };
 
-// ProfileCard component (unchanged)
 const ProfileCard = ({
   publicKey,
   stats,
@@ -44,7 +45,9 @@ const ProfileCard = ({
   stats: UserStats | undefined;
 }) => {
   const accountAge = stats?.createdAt
-    ? Math.floor((Date.now() - new Date(stats.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+    ? Math.floor(
+        (Date.now() - new Date(stats.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+      )
     : 0;
   const publicKeyStr = publicKey ? publicKey.toBase58() : '';
 
@@ -66,6 +69,7 @@ const ProfileCard = ({
           <p className="text-slate-400 text-sm">Since {accountAge} days</p>
         </div>
       </div>
+
       <div className="space-y-4">
         <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg">
           <span className="text-slate-400">Public Key</span>
@@ -80,6 +84,7 @@ const ProfileCard = ({
             </CopyToClipboard>
           </div>
         </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div className="p-4 bg-slate-900/50 rounded-lg">
             <div className="text-sm text-slate-400 mb-1">Games Played</div>
@@ -99,45 +104,31 @@ const ProfileCard = ({
   );
 };
 
-// Updated Dashboard component
 export default function Dashboard() {
-  const [isClient, setIsClient] = useState(false);
   const { publicKey } = useWallet();
   const router = useRouter();
 
-  // Set isClient to true after mounting on the client
+  // If wallet is not connected, notify and redirect
   useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  // Redirect if wallet is not connected (only on client side)
-  useEffect(() => {
-    if (isClient && !publicKey) {
-      toast.error('Please connect your wallet to access the dashboard.');
-      router.push('/'); // Redirect to homepage
+    if (!publicKey) {
+      toast.error("Please connect your wallet to access the dashboard.");
+      router.push("/");
     }
-  }, [isClient, publicKey, router]);
+  }, [publicKey, router]);
 
-  // Always define publicKeyString, even if null
-  const publicKeyString = publicKey?.toBase58() || null;
-
-  // Always call useSWR hooks, but conditionally fetch data
+  const publicKeyString = publicKey ? publicKey.toBase58() : '';
   const { data: stats, mutate: mutateStats } = useSWR(
-    isClient && publicKeyString ? `/api/users/${publicKeyString}` : null,
+    publicKeyString ? `/api/users/${publicKeyString}` : null,
     fetcher
   );
   const { data: history } = useSWR(
-    isClient && publicKeyString ? `/api/history?publicKey=${publicKeyString}` : null,
+    publicKeyString ? `/api/history?publicKey=${publicKeyString}` : null,
     fetcher
   );
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
-  // Prevent rendering if not on client or wallet not connected
-  if (!isClient || !publicKey) {
-    return null; // Optionally return a loading indicator: <div>Loading...</div>
-  }
-
   const handleWithdraw = async () => {
+    if (!publicKeyString) return;
     setIsWithdrawing(true);
     try {
       const response = await fetch('/api/withdraw', {
@@ -148,13 +139,10 @@ export default function Dashboard() {
       const data = await response.json();
       if (response.ok) {
         toast.success(`Withdrawal successful!`);
-        mutateStats(
-          (prevStats?: UserStats) => ({
-            ...(prevStats || { wins: 0, losses: 0, ties: 0, balance: 0 }),
-            balance: 0,
-          }),
-          false
-        );
+        // Update stats balance to zero by replacing the data with an object
+        if (stats) {
+          mutateStats({ ...stats, balance: 0 }, false);
+        }
         mutateStats();
       } else {
         toast.error(`Withdrawal failed: ${data.error}`);

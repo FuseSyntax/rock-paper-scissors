@@ -5,14 +5,32 @@ import { FiGithub, FiMenu, FiX } from 'react-icons/fi';
 import { WalletConnectButton } from './Auth/WalletConnect';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { FiAlertTriangle } from 'react-icons/fi';
+
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  const DevnetIndicator = () => (
+    <motion.div
+      initial={{ scale: 0.9 }}
+      animate={{ scale: 1 }}
+      transition={{ duration: 0.3 }}
+      className="flex items-center space-x-1 bg-teal-900/20 backdrop-blur-sm px-3 py-1.5 rounded-full border border-teal-400/20"
+      title="This application is running on Ron Devnet - Test Network"
+    >
+      <FiAlertTriangle className="w-4 h-4 text-teal-400" />
+      <span className="text-sm font-medium bg-gradient-to-r from-teal-400 to-cyan-400 bg-clip-text text-transparent">
+        Devnet
+      </span>
+    </motion.div>
+  );
+  
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
       <ToastContainer />
-      <nav className="border-b border-slate-800/50 backdrop-blur-sm sticky top-0 z-50">
+      <nav className="border-b border-slate-800/50 backdrop-blur-sm sticky top-0 z-50 sm:pt-3">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Left side - Logo */}
@@ -33,6 +51,8 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
               </div>
               
               <div className="flex items-center space-x-4 ml-4">
+              <DevnetIndicator />
+
                 <motion.a
                   href="https://github.com/nitindahiya-dev/rock-paper-scissors"
                   target="_blank"
@@ -80,6 +100,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
               <MobileNavLink href="/dashboard" text="Dashboard" toggleMenu={() => setIsMenuOpen(false)} />
               
               <div className="pt-4 border-t border-slate-800/50 flex items-center justify-between">
+
                 <WalletConnectButton className="w-full mr-2" />
                 <motion.a
                   href="https://github.com/nitindahiya-dev/rock-paper-scissors"
@@ -90,6 +111,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                 >
                   <FiGithub className="w-6 h-6 text-slate-300 hover:text-cyan-400" />
                 </motion.a>
+              <DevnetIndicator />
               </div>
             </div>
           </motion.div>
