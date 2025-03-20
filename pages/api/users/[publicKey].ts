@@ -1,3 +1,4 @@
+// pages/api/users/[publicKey].ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import prisma from '../../../lib/prisma';
 
@@ -9,6 +10,11 @@ export default async function handler(
   if (!publicKey || typeof publicKey !== 'string') {
     return res.status(400).json({ error: 'Missing or invalid publicKey' });
   }
+
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
   try {
     let user = await prisma.user.findUnique({
       where: { publicKey },

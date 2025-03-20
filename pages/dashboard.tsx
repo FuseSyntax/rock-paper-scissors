@@ -1,4 +1,3 @@
-// frontend/pages/dashboard.tsx
 import { useWallet } from '@solana/wallet-adapter-react';
 import useSWR from 'swr';
 import { motion } from 'framer-motion';
@@ -13,20 +12,17 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useRouter } from 'next/router';
 
-// Define the user stats interface
 interface UserStats {
   wins: number;
   losses: number;
   ties: number;
-  balance: number;
+  balance: number; // stored in lamports
   createdAt?: string;
 }
 
-// A simple fetcher for SWR
 const fetcher = (url: string): Promise<UserStats> =>
   fetch(url).then((res) => res.json());
 
-// Helper function to generate a player name based on public key
 const generatePlayerName = (publicKey: PublicKey | null): string => {
   if (!publicKey) return 'Unknown Player';
   const publicKeyStr = publicKey.toBase58();
@@ -45,9 +41,7 @@ const ProfileCard = ({
   stats: UserStats | undefined;
 }) => {
   const accountAge = stats?.createdAt
-    ? Math.floor(
-        (Date.now() - new Date(stats.createdAt).getTime()) / (1000 * 60 * 60 * 24)
-      )
+    ? Math.floor((Date.now() - new Date(stats.createdAt).getTime()) / (1000 * 60 * 60 * 24))
     : 0;
   const publicKeyStr = publicKey ? publicKey.toBase58() : '';
 
@@ -58,14 +52,9 @@ const ProfileCard = ({
       className="border border-slate-800/50 rounded-2xl bg-slate-900/20 p-6 backdrop-blur-sm"
     >
       <div className="flex items-center gap-4 mb-6">
-        <Jazzicon
-          diameter={60}
-          seed={parseInt(publicKeyStr.slice(0, 8), 16) || 12345}
-        />
+        <Jazzicon diameter={60} seed={parseInt(publicKeyStr.slice(0, 8), 16) || 12345} />
         <div>
-          <h2 className="text-xl font-bold text-slate-300">
-            {generatePlayerName(publicKey)}
-          </h2>
+          <h2 className="text-xl font-bold text-slate-300">{generatePlayerName(publicKey)}</h2>
           <p className="text-slate-400 text-sm">Since {accountAge} days</p>
         </div>
       </div>
@@ -102,28 +91,32 @@ const ProfileCard = ({
       </div>
     </motion.div>
   );
-};
+}
 
 export default function Dashboard() {
   const { publicKey } = useWallet();
   const router = useRouter();
 
-  // If wallet is not connected, notify and redirect
+  // Delay redirect to allow wallet adapter to load connection status.
   useEffect(() => {
-    if (!publicKey) {
-      toast.error("Please connect your wallet to access the dashboard.");
-      router.push("/");
-    }
+    const timer = setTimeout(() => {
+      if (!publicKey) {
+        toast.error('Please connect your wallet to access the dashboard.');
+        router.push('/');
+      }
+    }, 500);
+    return () => clearTimeout(timer);
   }, [publicKey, router]);
 
   const publicKeyString = publicKey ? publicKey.toBase58() : '';
   const { data: stats, mutate: mutateStats } = useSWR(
     publicKeyString ? `/api/users/${publicKeyString}` : null,
-    fetcher
+    fetcher,
+    { refreshInterval: 5000 } // Refresh every 5 seconds
   );
   const { data: history } = useSWR(
     publicKeyString ? `/api/history?publicKey=${publicKeyString}` : null,
-    fetcher
+    (url: string | URL | Request) => fetch(url).then((res) => res.json())
   );
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
@@ -138,11 +131,8 @@ export default function Dashboard() {
       });
       const data = await response.json();
       if (response.ok) {
-        toast.success(`Withdrawal successful!`);
-        // Update stats balance to zero by replacing the data with an object
-        if (stats) {
-          mutateStats({ ...stats, balance: 0 }, false);
-        }
+        toast.success('Withdrawal successful!');
+        // Immediately revalidate stats so the new balance is shown.
         mutateStats();
       } else {
         toast.error(`Withdrawal failed: ${data.error}`);
@@ -179,7 +169,8 @@ export default function Dashboard() {
           />
           <StatsCard
             title="Balance"
-            value={`${stats?.balance?.toFixed(6) || 0} SOL`}
+            // Convert lamports to SOL by dividing by 1e9
+            value={`${stats?.balance ? (stats.balance / 1e9).toFixed(6) : "0.000000"} SOL`}
             icon={<FiCalendar className="w-6 h-6" />}
             color="from-cyan-600/20 to-teal-600/20"
           />

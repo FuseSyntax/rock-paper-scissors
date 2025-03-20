@@ -1,4 +1,3 @@
-// frontend/pages/play.tsx
 import { useState } from 'react';
 import { Transaction, SystemProgram, PublicKey } from '@solana/web3.js';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,11 +8,9 @@ import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-// Define allowed choices and game result type
 type Choice = 'rock' | 'paper' | 'scissors';
 type GameResult = 'Win' | 'Loss' | 'Tie';
 
-// Function to calculate the game result based on user and computer choices
 function calculateResult(userChoice: Choice, computerChoice: Choice): GameResult {
   if (userChoice === computerChoice) return 'Tie';
   if (userChoice === 'rock') return computerChoice === 'scissors' ? 'Win' : 'Loss';
@@ -22,7 +19,6 @@ function calculateResult(userChoice: Choice, computerChoice: Choice): GameResult
   return 'Tie';
 }
 
-// Replace with your house account public key (this must match your on-chain configuration)
 const HOUSE_ACCOUNT_PUBKEY = new PublicKey("BAUkJe7i5u5J9hUJDDwmyJC8SKCXJ6YEZdQaUsPo3JeN");
 
 export default function PlayPage() {
@@ -34,19 +30,16 @@ export default function PlayPage() {
   const [isLoading, setIsLoading] = useState(false);
   const choices: Choice[] = ['rock', 'paper', 'scissors'];
 
-  // Custom error interface for wallet errors
   interface WalletError extends Error {
     code?: number;
   }
 
-  // Track the current step of the transaction process
   const [currentStep, setCurrentStep] = useState<'awaiting-approval' | 'processing' | 'finalizing' | null>(null);
 
-  // Function to send the fee transaction (0.000001 SOL)
+  // Send fee transaction with 1000 lamports (0.000001 SOL equivalent)
   const sendFeeTransaction = async (): Promise<string | null> => {
     if (!publicKey) return null;
-    const feeLamports = 1_000;
-  
+    const feeLamports = 1000;
     const tx = new Transaction().add(
       SystemProgram.transfer({
         fromPubkey: publicKey,
@@ -54,7 +47,6 @@ export default function PlayPage() {
         lamports: feeLamports,
       })
     );
-  
     try {
       const signature = await sendTransaction(tx, connection);
       return signature;
@@ -77,34 +69,41 @@ export default function PlayPage() {
       toast.error("Please connect your wallet");
       return;
     }
-
     setIsLoading(true);
     setSelectedChoice(choice);
     setCurrentStep('awaiting-approval');
-
     try {
-      // Step 1: Pay fee
       const signature = await sendFeeTransaction();
       if (!signature) {
         setIsLoading(false);
         setCurrentStep(null);
         return;
       }
-
-      // Step 2: Confirm transaction
       setCurrentStep('processing');
       await connection.confirmTransaction(signature, 'processed');
       toast.success("Fee paid successfully!");
-
-      // Step 3: Finalize game
       setCurrentStep('finalizing');
       await new Promise(resolve => setTimeout(resolve, 800));
-
-      // Continue with game logic...
       const compChoice = choices[Math.floor(Math.random() * choices.length)];
       setComputerChoice(compChoice);
       const computedResult = calculateResult(choice, compChoice);
       setResult(computedResult);
+
+      // Post game result.
+      // For win: +2000 lamports (0.000002 SOL), for loss: -1000 lamports (0.000001 SOL)
+      const payload = {
+        publicKey: publicKey.toBase58(),
+        result: computedResult,
+        amount: computedResult === 'Win' ? 2000 : computedResult === 'Loss' ? -1000 : 0,
+        yourChoice: choice,
+        computerChoice: compChoice,
+      };
+
+      await fetch('/api/games', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
     } catch (error) {
       console.error("Game error:", error);
@@ -123,7 +122,6 @@ export default function PlayPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 relative">
-      {/* Heading */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -135,8 +133,6 @@ export default function PlayPage() {
           </h2>
         </div>
       </motion.div>
-
-      {/* Game UI */}
       <div className="border border-slate-800 rounded-2xl p-4 backdrop-blur-xl shadow-2xl relative">
         <motion.div 
           className="grid grid-cols-3 gap-4"
@@ -163,8 +159,6 @@ export default function PlayPage() {
             />
           ))}
         </motion.div>
-
-        {/* Loading overlay using currentStep */}
         <AnimatePresence>
           {isLoading && currentStep && (
             <motion.div
@@ -175,8 +169,8 @@ export default function PlayPage() {
               className="absolute inset-0 flex items-center justify-center backdrop-blur-sm bg-black/50 z-50"
             >
               <div className="inline-flex flex-col items-center gap-4 text-cyan-400 p-8 rounded-2xl bg-slate-900/90 border border-slate-800/50 shadow-xl">
-              <AnimatePresence mode="wait">
-              {currentStep === 'awaiting-approval' && (
+                <AnimatePresence mode="wait">
+                  {currentStep === 'awaiting-approval' && (
                     <motion.div
                       key="awaiting-approval"
                       initial={{ opacity: 0, y: 10 }}
@@ -197,8 +191,7 @@ export default function PlayPage() {
                       </div>
                     </motion.div>
                   )}
-
-                  {currentStep === 'processing' && (
+                  {(currentStep === 'processing') && (
                     <motion.div
                       key="processing"
                       initial={{ opacity: 0, y: 10 }}
@@ -216,7 +209,6 @@ export default function PlayPage() {
                       </div>
                     </motion.div>
                   )}
-
                   {currentStep === 'finalizing' && (
                     <motion.div
                       key="finalizing"
@@ -243,13 +235,10 @@ export default function PlayPage() {
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* Display user's move and computer's move */}
         <div className="relative mt-8">
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="absolute w-full h-full bg-gradient-radial from-cyan-500/5 to-transparent animate-pulse" />
           </div>
-          
           <div className="flex items-center justify-center gap-8 relative z-10">
             <AnimatePresence>
               {selectedChoice && (
@@ -273,7 +262,6 @@ export default function PlayPage() {
                 </motion.div>
               )}
             </AnimatePresence>
-
             {selectedChoice && (
               <motion.div
                 initial={{ scale: 0 }}
@@ -286,7 +274,6 @@ export default function PlayPage() {
                 </div>
               </motion.div>
             )}
-
             <AnimatePresence>
               {computerChoice && (
                 <motion.div
@@ -311,8 +298,6 @@ export default function PlayPage() {
             </AnimatePresence>
           </div>
         </div>
-
-        {/* Display the game result */}
         <AnimatePresence>
           {result && (
             <motion.div

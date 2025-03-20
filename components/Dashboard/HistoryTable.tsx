@@ -6,7 +6,7 @@ interface GameHistory {
   result: 'Win' | 'Loss' | 'Tie';
   yourChoice: string;
   computerChoice: string;
-  amount: number;
+  amount: number; // stored in lamports
 }
 
 export const HistoryTable = ({ data }: { data: GameHistory[] }) => {
@@ -35,7 +35,7 @@ export const HistoryTable = ({ data }: { data: GameHistory[] }) => {
                 <th 
                   key={header}
                   className={`px-4 py-3 text-left text-slate-400 ${
-                    i === 0 ? 'rounded-tl-xl' : i === 4 ? 'rounded-tr-xl' : ''
+                    i === 0 ? 'rounded-tl-xl' : i === 3 ? 'rounded-tr-xl' : ''
                   }`}
                 >
                   {header}
@@ -51,19 +51,22 @@ export const HistoryTable = ({ data }: { data: GameHistory[] }) => {
                 animate={{ opacity: 1 }}
                 className="border-b border-slate-800/50 last:border-0 hover:bg-slate-900/20 transition-colors"
               >
-                {/* <td className="px-4 py-3 text-slate-300">{item.date}</td> */}
                 <td className="px-4 py-3">
                   <span className={`px-2.5 py-1 rounded-full text-sm ${
-                    item.result === 'Win' ? 'bg-teal-600/20 text-teal-400' :
-                    item.result === 'Loss' ? 'bg-rose-600/20 text-rose-400' : 
-                    'bg-slate-600/20 text-slate-400'
+                    item.result === 'Win'
+                      ? 'bg-teal-600/20 text-teal-400'
+                      : item.result === 'Loss'
+                      ? 'bg-rose-600/20 text-rose-400'
+                      : 'bg-slate-600/20 text-slate-400'
                   }`}>
                     {item.result}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-slate-400 capitalize">{item.yourChoice}</td>
                 <td className="px-4 py-3 text-slate-400 capitalize">{item.computerChoice}</td>
-                <td className="px-4 py-3 text-cyan-400 font-mono">{item.amount.toFixed(6)} SOL</td>
+                <td className="px-4 py-3 text-cyan-400 font-mono">
+                  {(item.amount / 1e9).toFixed(6)} SOL
+                </td>
               </motion.tr>
             ))}
           </tbody>

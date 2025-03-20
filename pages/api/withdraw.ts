@@ -1,12 +1,10 @@
-// frontend/pages/api/withdraw.ts
+// pages/api/withdraw.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import prisma from '../../lib/prisma';
 
-// Use an Alchemy devnet endpoint (or the official endpoint) for airdrops.
-// Replace YOUR_API_KEY with a valid key if using Alchemy.
 const connection = new Connection(
-    'https://solana-devnet.g.alchemy.com/v2/YMEA2JwMZDAKAmATUjlwvrpP0Rnmc2YF',
+  'https://solana-devnet.g.alchemy.com/v2/YMEA2JwMZDAKAmATUjlwvrpP0Rnmc2YF',
   'confirmed'
 );
 
@@ -44,6 +42,7 @@ export default async function handler(
       new PublicKey(publicKey),
       lamports
     );
+    console.log(`Requested airdrop for ${publicKey}. TxSignature: ${txSignature}`);
 
     // Poll for confirmation (up to 60 seconds)
     let retries = 10;
@@ -69,11 +68,10 @@ export default async function handler(
       data: { balance: 0 },
     });
 
+    console.log(`Withdrawal successful for ${publicKey}`);
     res.status(200).json({ success: true, txSignature });
   } catch (error) {
     console.error('Error processing withdrawal:', error);
-    res
-      .status(500)
-      .json({ error: error instanceof Error ? error.message : 'Internal server error' });
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Internal server error' });
   }
 }
