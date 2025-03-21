@@ -1,19 +1,16 @@
-// frontend/pages/play.tsx
 import { useState } from 'react';
 import { Transaction, SystemProgram, PublicKey } from '@solana/web3.js';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChoiceButton } from '../components/Game/ChoiceButton';
-import { FaHandRock, FaHandPaper, FaHandScissors, FaRedo, FaCoins } from 'react-icons/fa';
+import { FaHandRock, FaHandPaper, FaHandScissors, FaRedo, FaCoins, FaWallet } from 'react-icons/fa';
 import { GiSpinningSword } from 'react-icons/gi';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-// Define allowed choices and game result type
 type Choice = 'rock' | 'paper' | 'scissors';
 type GameResult = 'Win' | 'Loss' | 'Tie';
 
-// Function to calculate the game result based on user and computer choices
 function calculateResult(userChoice: Choice, computerChoice: Choice): GameResult {
   if (userChoice === computerChoice) return 'Tie';
   if (userChoice === 'rock') return computerChoice === 'scissors' ? 'Win' : 'Loss';
@@ -22,7 +19,6 @@ function calculateResult(userChoice: Choice, computerChoice: Choice): GameResult
   return 'Tie';
 }
 
-// Replace with your house account public key (this must match your on-chain configuration)
 const HOUSE_ACCOUNT_PUBKEY = new PublicKey("BAUkJe7i5u5J9hUJDDwmyJC8SKCXJ6YEZdQaUsPo3JeN");
 
 export default function PlayPage() {
@@ -32,14 +28,18 @@ export default function PlayPage() {
   const [selectedChoice, setSelectedChoice] = useState<Choice | ''>('');
   const [computerChoice, setComputerChoice] = useState<Choice | ''>('');
   const [isLoading, setIsLoading] = useState(false);
-
   const choices: Choice[] = ['rock', 'paper', 'scissors'];
 
-  // Function to send the fee transaction (0.000001 SOL)
-  const sendFeeTransaction = async (): Promise<boolean> => {
-    if (!publicKey) return false;
-    const feeLamports = 1_000; // 0.000001 SOL in lamports
+  interface WalletError extends Error {
+    code?: number;
+  }
 
+  const [currentStep, setCurrentStep] = useState<'awaiting-approval' | 'processing' | 'finalizing' | null>(null);
+
+  // Send fee transaction with 1000 lamports (0.000001 SOL equivalent)
+  const sendFeeTransaction = async (): Promise<string | null> => {
+    if (!publicKey) return null;
+    const feeLamports = 1000;
     const tx = new Transaction().add(
       SystemProgram.transfer({
         fromPubkey: publicKey,
@@ -47,68 +47,70 @@ export default function PlayPage() {
         lamports: feeLamports,
       })
     );
-
     try {
       const signature = await sendTransaction(tx, connection);
-      // Use a commitment level that suits your needs (here, 'processed')
-      await connection.confirmTransaction(signature, 'processed');
-      // toast.success(`Fee paid! Transaction: ${signature}`);
-      toast.success(`Fee paid successfully!`);
-      return true;
-    } catch (error) {
+      return signature;
+    } catch (error: unknown) {
       console.error("Fee payment failed:", error);
-      toast.error("Fee payment failed. Please try again.");
-      return false;
+      if (error instanceof Error) {
+        const walletError = error as WalletError;
+        if (walletError.message.includes("User rejected") || walletError.code === 4001) {
+          toast.error("Transaction rejected. Please approve the transaction to continue.");
+        } else {
+          toast.error("Fee payment failed. Please try again.");
+        }
+      }
+      return null;
     }
   };
 
   const handlePlay = async (choice: Choice) => {
     if (!publicKey) {
-      alert("Please connect your wallet");
+      toast.error("Please connect your wallet");
       return;
     }
-
     setIsLoading(true);
     setSelectedChoice(choice);
-
-    // STEP 1: Ask user to pay the fee
-    const feePaid = await sendFeeTransaction();
-    if (!feePaid) {
-      setIsLoading(false);
-      return;
-    }
-
-    // STEP 2: Simulate a short delay to mimic processing time
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    // STEP 3: Determine computer's choice and calculate the result
-    const compChoice = choices[Math.floor(Math.random() * choices.length)];
-    setComputerChoice(compChoice);
-    const computedResult = calculateResult(choice, compChoice);
-    setResult(computedResult);
-    setIsLoading(false);
-
-    // STEP 4: Post the game result to your backend API for persistence
-    const payload = {
-      publicKey: publicKey.toBase58(),
-      result: computedResult,
-      amount: computedResult === 'Win' ? 0.000002 : computedResult === 'Loss' ? -0.000001 : 0,
-      yourChoice: choice,
-      computerChoice: compChoice,
-    };
-
+    setCurrentStep('awaiting-approval');
     try {
-      const response = await fetch('/api/games', {
+      const signature = await sendFeeTransaction();
+      if (!signature) {
+        setIsLoading(false);
+        setCurrentStep(null);
+        return;
+      }
+      setCurrentStep('processing');
+      await connection.confirmTransaction(signature, 'processed');
+      toast.success("Fee paid successfully!");
+      setCurrentStep('finalizing');
+      await new Promise(resolve => setTimeout(resolve, 800));
+      const compChoice = choices[Math.floor(Math.random() * choices.length)];
+      setComputerChoice(compChoice);
+      const computedResult = calculateResult(choice, compChoice);
+      setResult(computedResult);
+
+      // Post game result.
+      // For win: +2000 lamports (0.000002 SOL), for loss: -1000 lamports (0.000001 SOL)
+      const payload = {
+        publicKey: publicKey.toBase58(),
+        result: computedResult,
+        amount: computedResult === 'Win' ? 2000 : computedResult === 'Loss' ? -1000 : 0,
+        yourChoice: choice,
+        computerChoice: compChoice,
+      };
+
+      await fetch('/api/games', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      console.log("POST /api/games response:", response.status);
-      if (!response.ok) {
-        console.error("Failed to update game result", response.statusText);
-      }
+
     } catch (error) {
-      console.error("Error posting game result", error);
+      console.error("Game error:", error);
+      toast.error("An error occurred during the game. Please try again.");
+    } finally {
+      setIsLoading(false);
+      setCurrentStep(null);
     }
   };
 
@@ -119,8 +121,7 @@ export default function PlayPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4">
-      {/* Heading */}
+    <div className="max-w-4xl mx-auto px-4 relative">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -132,9 +133,7 @@ export default function PlayPage() {
           </h2>
         </div>
       </motion.div>
-
-      {/* Game UI */}
-      <div className="border border-slate-800 rounded-2xl p-4 backdrop-blur-xl shadow-2xl">
+      <div className="border border-slate-800 rounded-2xl p-4 backdrop-blur-xl shadow-2xl relative">
         <motion.div 
           className="grid grid-cols-3 gap-4"
           initial={{ opacity: 0 }}
@@ -160,12 +159,86 @@ export default function PlayPage() {
             />
           ))}
         </motion.div>
-
+        <AnimatePresence>
+          {isLoading && currentStep && (
+            <motion.div
+              key="loading-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 flex items-center justify-center backdrop-blur-sm bg-black/50 z-50"
+            >
+              <div className="inline-flex flex-col items-center gap-4 text-cyan-400 p-8 rounded-2xl bg-slate-900/90 border border-slate-800/50 shadow-xl">
+                <AnimatePresence mode="wait">
+                  {currentStep === 'awaiting-approval' && (
+                    <motion.div
+                      key="awaiting-approval"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="flex flex-col items-center gap-3"
+                    >
+                      <motion.div
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{ repeat: Infinity, duration: 1.5 }}
+                        className="text-6xl"
+                      >
+                        <FaWallet />
+                      </motion.div>
+                      <div className="text-xl font-bold">Approve Transaction</div>
+                      <div className="text-sm text-slate-300 text-center max-w-xs">
+                        Please check your wallet extension to confirm the payment.
+                      </div>
+                    </motion.div>
+                  )}
+                  {(currentStep === 'processing') && (
+                    <motion.div
+                      key="processing"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="flex flex-col items-center gap-3"
+                    >
+                      <div className="animate-spin rounded-full h-12 w-12 border-4 border-cyan-400 border-t-transparent"></div>
+                      <div className="text-xl font-bold">Processing Payment</div>
+                      <div className="text-sm text-slate-300 text-center">
+                        Securely validating your transaction on the blockchain...
+                      </div>
+                      <div className="text-xs text-slate-500 mt-2">
+                        This usually takes 5-15 seconds
+                      </div>
+                    </motion.div>
+                  )}
+                  {currentStep === 'finalizing' && (
+                    <motion.div
+                      key="finalizing"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="flex flex-col items-center gap-3"
+                    >
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                        className="text-6xl"
+                      >
+                        <GiSpinningSword />
+                      </motion.div>
+                      <div className="text-xl font-bold">Preparing Your Match</div>
+                      <div className="text-sm text-slate-300 text-center">
+                        Generating computer opponent and calculating results...
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div className="relative mt-8">
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="absolute w-full h-full bg-gradient-radial from-cyan-500/5 to-transparent animate-pulse" />
           </div>
-          
           <div className="flex items-center justify-center gap-8 relative z-10">
             <AnimatePresence>
               {selectedChoice && (
@@ -189,7 +262,6 @@ export default function PlayPage() {
                 </motion.div>
               )}
             </AnimatePresence>
-
             {selectedChoice && (
               <motion.div
                 initial={{ scale: 0 }}
@@ -202,7 +274,6 @@ export default function PlayPage() {
                 </div>
               </motion.div>
             )}
-
             <AnimatePresence>
               {computerChoice && (
                 <motion.div
@@ -226,21 +297,7 @@ export default function PlayPage() {
               )}
             </AnimatePresence>
           </div>
-
-          {isLoading && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="absolute inset-0 flex items-center justify-center backdrop-blur-sm"
-            >
-              <div className="inline-flex flex-col items-center gap-3 text-cyan-400">
-                <div className="animate-spin rounded-full h-12 w-12 border-4 border-cyan-400 border-t-transparent"></div>
-                <div className="font-medium tracking-widest text-sm">Processing fee...</div>
-              </div>
-            </motion.div>
-          )}
         </div>
-
         <AnimatePresence>
           {result && (
             <motion.div
@@ -261,7 +318,6 @@ export default function PlayPage() {
                   {result === 'Loss' && '💥 Defeat'}
                   {result === 'Tie' && '🤝 Draw'}
                 </h3>
-                
                 <div className="mb-6">
                   <span className={`px-4 py-2 rounded-full text-sm font-medium ${
                     result === 'Win'
@@ -275,7 +331,6 @@ export default function PlayPage() {
                     {result === 'Tie' && '0 SOL'}
                   </span>
                 </div>
-
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}

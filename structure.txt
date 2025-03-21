@@ -14,6 +14,7 @@ frontend/
        ├── users/
 │             ├── [publicKey].ts
 │             ├── index.ts
+│      ├── createUser.tsx
 │      ├── games.tsx
 │      ├── history.tsx
 │   ├── index.tsx        # Landing page

@@ -12,19 +12,17 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useRouter } from 'next/router';
 
-// A simple fetcher function for SWR
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
-
-// Define an interface for user statistics
 interface UserStats {
   wins: number;
   losses: number;
   ties: number;
-  balance: number;
+  balance: number; // stored in lamports
   createdAt?: string;
 }
 
-// Helper function to generate a player name based on public key
+const fetcher = (url: string): Promise<UserStats> =>
+  fetch(url).then((res) => res.json());
+
 const generatePlayerName = (publicKey: PublicKey | null): string => {
   if (!publicKey) return 'Unknown Player';
   const publicKeyStr = publicKey.toBase58();
@@ -35,7 +33,6 @@ const generatePlayerName = (publicKey: PublicKey | null): string => {
   return `${names[index]} #${publicKeyStr.slice(0, 4)}`;
 };
 
-// ProfileCard component (unchanged)
 const ProfileCard = ({
   publicKey,
   stats,
@@ -55,17 +52,13 @@ const ProfileCard = ({
       className="border border-slate-800/50 rounded-2xl bg-slate-900/20 p-6 backdrop-blur-sm"
     >
       <div className="flex items-center gap-4 mb-6">
-        <Jazzicon
-          diameter={60}
-          seed={parseInt(publicKeyStr.slice(0, 8), 16) || 12345}
-        />
+        <Jazzicon diameter={60} seed={parseInt(publicKeyStr.slice(0, 8), 16) || 12345} />
         <div>
-          <h2 className="text-xl font-bold text-slate-300">
-            {generatePlayerName(publicKey)}
-          </h2>
+          <h2 className="text-xl font-bold text-slate-300">{generatePlayerName(publicKey)}</h2>
           <p className="text-slate-400 text-sm">Since {accountAge} days</p>
         </div>
       </div>
+
       <div className="space-y-4">
         <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg">
           <span className="text-slate-400">Public Key</span>
@@ -80,6 +73,7 @@ const ProfileCard = ({
             </CopyToClipboard>
           </div>
         </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div className="p-4 bg-slate-900/50 rounded-lg">
             <div className="text-sm text-slate-400 mb-1">Games Played</div>
@@ -97,47 +91,38 @@ const ProfileCard = ({
       </div>
     </motion.div>
   );
-};
+}
 
-// Updated Dashboard component
 export default function Dashboard() {
-  const [isClient, setIsClient] = useState(false);
   const { publicKey } = useWallet();
   const router = useRouter();
 
-  // Set isClient to true after mounting on the client
+  // Delay redirect to allow wallet adapter to load connection status.
   useEffect(() => {
-    setIsClient(true);
-  }, []);
+    const timer = setTimeout(() => {
+      if (!publicKey) {
+        toast.error('Please connect your wallet to access the dashboard.');
+        router.push('/');
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [publicKey, router]);
 
-  // Redirect if wallet is not connected (only on client side)
-  useEffect(() => {
-    if (isClient && !publicKey) {
-      toast.error('Please connect your wallet to access the dashboard.');
-      router.push('/'); // Redirect to homepage
-    }
-  }, [isClient, publicKey, router]);
-
-  // Always define publicKeyString, even if null
-  const publicKeyString = publicKey?.toBase58() || null;
-
-  // Always call useSWR hooks, but conditionally fetch data
+  const publicKeyString = publicKey ? publicKey.toBase58() : '';
   const { data: stats, mutate: mutateStats } = useSWR(
-    isClient && publicKeyString ? `/api/users/${publicKeyString}` : null,
-    fetcher
+    publicKeyString ? `/api/users/${publicKeyString}` : null,
+    fetcher,
+    { refreshInterval: 5000 }
   );
+  
   const { data: history } = useSWR(
-    isClient && publicKeyString ? `/api/history?publicKey=${publicKeyString}` : null,
-    fetcher
+    publicKeyString ? `/api/history?publicKey=${publicKeyString}` : null,
+    (url: string | URL | Request) => fetch(url).then((res) => res.json())
   );
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
-  // Prevent rendering if not on client or wallet not connected
-  if (!isClient || !publicKey) {
-    return null; // Optionally return a loading indicator: <div>Loading...</div>
-  }
-
   const handleWithdraw = async () => {
+    if (!publicKeyString) return;
     setIsWithdrawing(true);
     try {
       const response = await fetch('/api/withdraw', {
@@ -147,14 +132,8 @@ export default function Dashboard() {
       });
       const data = await response.json();
       if (response.ok) {
-        toast.success(`Withdrawal successful!`);
-        mutateStats(
-          (prevStats?: UserStats) => ({
-            ...(prevStats || { wins: 0, losses: 0, ties: 0, balance: 0 }),
-            balance: 0,
-          }),
-          false
-        );
+        toast.success('Withdrawal successful!');
+        // Immediately revalidate stats so the new balance is shown.
         mutateStats();
       } else {
         toast.error(`Withdrawal failed: ${data.error}`);
@@ -191,7 +170,8 @@ export default function Dashboard() {
           />
           <StatsCard
             title="Balance"
-            value={`${stats?.balance?.toFixed(6) || 0} SOL`}
+            // Convert lamports to SOL by dividing by 1e9
+            value={`${stats?.balance ? (stats.balance / 1e9).toFixed(6) : "0.000000"} SOL`}
             icon={<FiCalendar className="w-6 h-6" />}
             color="from-cyan-600/20 to-teal-600/20"
           />

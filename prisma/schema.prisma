@@ -1,7 +1,5 @@
-// prisma/schema.prisma
-
 datasource db {
-  provider = "postgresql" // or "sqlite" if using SQLite
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -10,22 +8,26 @@ generator client {
 }
 
 model User {
-  publicKey   String      @id
-  wins        Int
-  losses      Int
-  ties        Int
-  balance     Float
-  games       GameHistory[]
-  createdAt   DateTime    @default(now())
+  publicKey      String        @id @map("publickey")
+  wins           Int           @map("wins")
+  losses         Int           @map("losses")
+  ties           Int           @map("ties")
+  balance        Float         @map("balance")
+  createdAt      DateTime      @default(now()) @map("createdat")
+  gameHistories  GameHistory[]
+
+  @@map("users")
 }
 
 model GameHistory {
-  id             Int      @id @default(autoincrement())
-  userPublicKey  String
-  user           User     @relation(fields: [userPublicKey], references: [publicKey])
-  result         String
-  yourChoice     String
-  computerChoice String
-  amount         Float
-  createdAt      DateTime @default(now())
+  id             Int       @id @default(autoincrement())
+  userPublicKey  String    @map("userpublickey")
+  result         String    @map("result")
+  yourChoice     String    @map("yourchoice")
+  computerChoice String    @map("computerchoice")
+  amount         Float     @map("amount")
+  createdAt      DateTime  @default(now()) @map("createdat")
+  user           User      @relation(fields: [userPublicKey], references: [publicKey])
+
+  @@map("gamehistory")
 }

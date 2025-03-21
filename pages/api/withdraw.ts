@@ -1,13 +1,11 @@
-// frontend/pages/api/withdraw.ts
+// pages/api/withdraw.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import prisma from '../../lib/prisma';
 
-// Use an Alchemy devnet endpoint (or the official endpoint) for airdrops.
-// Replace YOUR_API_KEY with a valid key if using Alchemy.
 const connection = new Connection(
-    'https://solana-devnet.g.alchemy.com/v2/YMEA2JwMZDAKAmATUjlwvrpP0Rnmc2YF',
-  'confirmed'
+  'https://api.devnet.solana.com',  // Using default Solana devnet endpoint
+  'finalized'
 );
 
 export default async function handler(
@@ -34,46 +32,65 @@ export default async function handler(
       return res.status(400).json({ error: 'Insufficient balance' });
     }
 
-    // Cap the requested airdrop amount if needed (e.g., not more than 2 SOL)
     const maxAirdropSOL = 2;
     const requestedSOL = Math.min(amountSOL, maxAirdropSOL);
     const lamports = Math.floor(requestedSOL * LAMPORTS_PER_SOL);
 
-    // Request an airdrop
-    const txSignature = await connection.requestAirdrop(
-      new PublicKey(publicKey),
-      lamports
+    // Retry logic for airdrop request
+    let txSignature: string | undefined;
+    const maxAirdropRetries = 3;
+    for (let i = 0; i < maxAirdropRetries; i++) {
+      try {
+        txSignature = await connection.requestAirdrop(
+          new PublicKey(publicKey),
+          lamports
+        );
+        console.log(`Airdrop request succeeded on attempt ${i + 1}. TxSignature: ${txSignature}`);
+        break; // Exit loop if successful
+      } catch (err) {
+        console.error(`Airdrop request failed on attempt ${i + 1}:`, err);
+        if (i === maxAirdropRetries - 1) {
+          throw new Error('Airdrop failed after multiple attempts.');
+        }
+        // Wait 2 seconds before retrying
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+
+    if (!txSignature) {
+      throw new Error('No transaction signature received from airdrop.');
+    }
+
+    // Get the latest blockhash info for confirmation
+    const latestBlockHash = await connection.getLatestBlockhash();
+
+    // Confirm the transaction using Solana's built-in confirmation API
+    const confirmation = await connection.confirmTransaction(
+      {
+        signature: txSignature,
+        blockhash: latestBlockHash.blockhash,
+        lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+      },
+      'finalized'
     );
 
-    // Poll for confirmation (up to 60 seconds)
-    let retries = 10;
-    while (retries > 0) {
-      const status = await connection.getSignatureStatus(txSignature);
-      if (
-        status?.value?.confirmationStatus === 'confirmed' ||
-        status?.value?.confirmationStatus === 'finalized'
-      ) {
-        break;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      retries--;
+    if (confirmation.value?.err) {
+      console.error('Transaction confirmation error:', confirmation.value.err);
+      throw new Error('Transaction confirmation error.');
     }
 
-    if (retries === 0) {
-      throw new Error('Transaction not confirmed in time.');
-    }
-
-    // Set user's balance to 0 after successful withdrawal
+    // Update user's balance to 0 after a successful withdrawal
     await prisma.user.update({
       where: { publicKey },
       data: { balance: 0 },
     });
 
+    console.log(`Withdrawal successful for ${publicKey}`);
     res.status(200).json({ success: true, txSignature });
   } catch (error) {
     console.error('Error processing withdrawal:', error);
-    res
-      .status(500)
-      .json({ error: error instanceof Error ? error.message : 'Internal server error' });
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Internal server error',
+    });
   }
 }
