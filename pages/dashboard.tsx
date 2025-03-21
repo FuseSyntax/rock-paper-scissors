@@ -112,8 +112,9 @@ export default function Dashboard() {
   const { data: stats, mutate: mutateStats } = useSWR(
     publicKeyString ? `/api/users/${publicKeyString}` : null,
     fetcher,
-    { refreshInterval: 5000 } // Refresh every 5 seconds
+    { refreshInterval: 5000 }
   );
+  
   const { data: history } = useSWR(
     publicKeyString ? `/api/history?publicKey=${publicKeyString}` : null,
     (url: string | URL | Request) => fetch(url).then((res) => res.json())
