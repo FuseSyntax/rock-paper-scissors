@@ -62,8 +62,6 @@ export default async function handler(
       throw new Error('No transaction signature received from airdrop.');
     }
 
-    // Get the latest blockhash info for a confirmation window
-    const latestBlockHash = await connection.getLatestBlockhash();
 
     // Confirm the transaction by polling every 2 seconds for up to 120 seconds (60 attempts)
     let retries = 60;
